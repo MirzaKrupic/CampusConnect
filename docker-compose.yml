@@ -1,0 +1,118 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: campusconnect-postgres
+    environment:
+      POSTGRES_DB: campusconnect
+      POSTGRES_USER: campus_admin
+      POSTGRES_PASSWORD: campus_pass_123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campus_admin -d campusconnect"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: campusconnect-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  mongodb:
+    image: mongo:7
+    container_name: campusconnect-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: campus_admin
+      MONGO_INITDB_ROOT_PASSWORD: campus_pass_123
+      MONGO_INITDB_DATABASE: campusconnect
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')", "--quiet"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
+  neo4j:
+    image: neo4j:5.14-community
+    container_name: campusconnect-neo4j
+    environment:
+      NEO4J_AUTH: neo4j/campus_pass_123
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+    ports:
+      - "7474:7474"  # HTTP
+      - "7687:7687"  # Bolt
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -O /dev/null -q http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: campusconnect-backend
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=campusconnect
+      - POSTGRES_USER=campus_admin
+      - POSTGRES_PASSWORD=campus_pass_123
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MONGODB_HOST=mongodb
+      - MONGODB_PORT=27017
+      - MONGODB_DB=campusconnect
+      - MONGODB_USER=campus_admin
+      - MONGODB_PASSWORD=campus_pass_123
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=campus_pass_123
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app/backend
+      - ./docker/init:/app/docker/init
+    command: >
+      sh -c "
+        echo 'Waiting for all databases to be ready...' &&
+        sleep 10 &&
+        echo 'Running seed script...' &&
+        python /app/docker/init/seed.py &&
+        echo 'Starting FastAPI server...' &&
+        uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+volumes:
+  postgres_data:
+  redis_data:
+  mongodb_data:
+  neo4j_data:
