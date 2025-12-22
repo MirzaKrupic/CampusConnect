@@ -545,13 +545,6 @@ curl "http://localhost:8000/groups/1/posts/feed"
 # Restart MongoDB
 docker start campusconnect-mongodb
 ```
-
-**Discussion Questions:**
-- Which database is most critical? (PostgreSQL - source of truth)
-- How could we add fallbacks for Redis cache failures?
-- What's the blast radius of each database failure?
-- How would you design for higher availability?
-
 ---
 
 ### Classroom Exercise 3: Modify Recommendation Query
@@ -716,14 +709,3 @@ This demo assumes synchronous writes. In production:
 MIT License - Free to use for education and learning
 
 ---
-
-## Credits
-
-Built as a teaching tool for database architecture courses. Demonstrates real-world patterns used by companies like:
-- **LinkedIn** (Social graph in graph DB, profiles in relational DB)
-- **Twitter** (Timeline cache in Redis, tweets in distributed DB)
-- **Airbnb** (Search in Elasticsearch, bookings in MySQL, analytics in data warehouse)
-
----
-
-**Questions or improvements?** Open an issue or PR on GitHub.
