@@ -401,8 +401,8 @@ ratelimit:user:1 -> "45"  [TTL: 60s]
 
 ---
 
-## Teaching Guide
 
+<<<<<<< HEAD
 This project is designed for classroom use to teach database design tradeoffs.
 
 ### Learning Objectives
@@ -709,3 +709,5 @@ This demo assumes synchronous writes. In production:
 MIT License - Free to use for education and learning
 
 ---
+=======
+>>>>>>> cff8988 (adding python requirements)
